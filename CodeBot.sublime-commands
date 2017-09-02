@@ -1,0 +1,14 @@
+[
+	{"caption": "RWS4: Get Definition", "command": "code_bot_get_definition"},
+	{"caption": "RWS4: Get Meta Data", "command": "code_bot_get_meta_data"},
+	{"caption": "RWS4: Feeling Lucky", "command": "code_bot_feeling_lucky"},
+	{"caption": "RWS4: Get Pojo", "command": "code_bot_get_pojo"},
+	{"caption": "RWS4: Get MyBatis", "command": "code_bot_get_my_batis"},
+	{"caption": "RWS4: Get Service", "command": "code_bot_get_service"},
+	{"caption": "RWS4: Get Service Impl", "command": "code_bot_get_service_impl"},
+	{"caption": "RWS4: Get Controller", "command": "code_bot_get_controller"},
+	{"caption": "RWS4: Get Dao", "command": "code_bot_get_dao"},
+	{"caption": "RWS4: Load SQL", "command": "code_bot_load_data"},
+	{"caption": "RWS4: Load Model Map", "command": "code_bot_load_model_map"},
+	{"caption": "RWS4: Get Html", "command": "code_bot_get_html"}
+]
