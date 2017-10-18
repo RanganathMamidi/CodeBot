@@ -90,11 +90,11 @@ def javaMethodName(tableName, indexColumns, modifier):
 def loadModelMapFromFile():
 	sublime.active_window().status_message('Loading cache from file')
 	try:
-		json_file = open('model.json', 'r')
+		json_file = open('D:/model.json', 'r')
 	except IOError:
-		json_file = open('model.json', 'w')
+		json_file = open('D:/model.json', 'w')
 		return
-	with open('model.json') as json_file:
+	with open('D:/model.json') as json_file:
 		global modelMap
 		if os.path.getsize(os.path.realpath(json_file.name)) > 0 :
 			modelMap = json.load(json_file)
@@ -541,7 +541,7 @@ class CodeBotLoadDataCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
 		sublime.active_window().status_message('processing and uploading model')
 		self.loadFromSelections(edit)
-		with open('model.json', 'w') as outfile:  
+		with open('D:/model.json', 'w') as outfile:  
 			global modelMap
 			json.dump(modelMap, outfile)
 
@@ -552,7 +552,7 @@ class CodeBotLoadDataCommand(sublime_plugin.TextCommand):
 				self.loadSegment(edit, segment.strip())
 
 	def loadSegment(self, edit, segmentStr):
-		if segmentStr.lower().find(' table ') >= 0:
+		if segmentStr.lower().find('create ')  and segmentStr.lower().find(' table ') >= 0:
 			consumeTable(segmentStr)
 		#indexs logic here
 		elif segmentStr.lower().find('create primary ') >= 0:
@@ -606,7 +606,6 @@ class CodeBotGetHtmlCommand(sublime_plugin.TextCommand):
 class CodeBotFeelingLuckyCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
 		fileName = self.view.file_name()
-		print(fileName)
 		if fileName == None:#default
 			processSelections(self.view, edit, 'DEFINITION')
 		elif fileName.find('.java') >= 0 and fileName.find('Default') >= 0 and fileName.find('Service'):
@@ -623,3 +622,38 @@ class CodeBotFeelingLuckyCommand(sublime_plugin.TextCommand):
 			processSelections(self.view, edit, 'MY_BATIS')
 		elif fileName.find('.html') >= 0 or fileName.find('.jsp') >= 0 or fileName.find('.tmpl') >= 0 or fileName.find('.view') >= 0:
 			processSelections(self.view, edit, 'HTML')
+
+class QueryBuilderCommand(sublime_plugin.TextCommand):
+	# selectedItems = []
+	# suggestions = []
+	# edit = null
+	def run(self, edit, selectedItems=[], suggestions=[]):
+		self.selectedItems = selectedItems
+		self.suggestions = suggestions
+		self.edit = edit
+		self.processMenu()
+
+
+	def on_done(self, index):
+		if index == -1:
+			return
+		for sel in self.view.sel():
+			region = sel if sel else self.view.word(sel)
+			text = self.view.substr(region).strip()
+			self.view.replace(self.edit, region, text + ', ' + json.dumps(self.suggestions[index]))
+		self.selectedItems.insert(len(self.selectedItems), self.suggestions[index])
+		self.suggestions.pop(index)
+		sublime.set_timeout(self.triggerPopup, 100)
+
+	def processMenu(self):
+		global modelMap
+		if len(self.selectedItems) == 0:
+			self.suggestions = list(modelMap.keys())
+			self.view.show_popup_menu(self.suggestions, self.on_done)
+			return
+		print('suggestions')
+		print(self.suggestions)
+		self.view.show_popup_menu(self.suggestions, self.on_done)
+
+	def triggerPopup(self):
+		self.view.run_command("query_builder", {"selectedItems": self.selectedItems, "suggestions": self.suggestions})
