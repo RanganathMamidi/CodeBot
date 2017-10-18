@@ -105,7 +105,7 @@ loadModelMapFromFile()
 
 def consumeTable(tableString):
 	global modelMap
-	model = {'columns' : {}, 'primaryIndex' : [], 'uniqueIndexes' : [], 'otherIndexes' : [], 'definition':''}
+	model = {'columns' : {}, 'primaryIndex' : [], 'uniqueIndexes' : [], 'otherIndexes' : [], 'fkIn' : [], 'fkOut' :[], 'definition':''}
 	model['definition'] = tableString
 	tableString = tableString.lower()
 	tableString = tableString[tableString.index('create table')+12:].lower().strip(' ')
@@ -116,7 +116,7 @@ def consumeTable(tableString):
 		constraintIndex = re.search(r"\b" + re.escape("constraint") + r"\b", columnsString.lower()).start()
 		constraintsString = columnsString[constraintIndex:].lower()
 		columnsString = columnsString[:constraintIndex].lower()
-	#loop over columns as easy as easy
+	#loop over columns as easy
 	seqNo = 0
 	for columnString in columnsString.split(',\n'):
 		# for columnAttr in columnString.split(' '):
@@ -134,16 +134,34 @@ def consumeTable(tableString):
 	if constraintsString:
 		for constraintString in constraintsString.split("constraint"):
 			if  constraintString and constraintString.strip():
-				constraintString = constraintString.strip()
+				constraintString = constraintString.replace('\n', ' ').replace('\t', ' ').strip()
 				constraintString = constraintString[constraintString.index(' ')+1:].strip()
-				keyType = constraintString[:constraintString.index(' ')+1].strip()
-				constraintString = constraintString[constraintString.index(' ')+1:].strip()
-				constraintString = constraintString[constraintString.index('('):].strip()
-				columns = constraintString.partition('(')[-1].rpartition(')')[0].replace(' ','').split(',')
+				keyType = constraintString[:constraintString.index(' ')].strip()
+				constraintString = constraintString[constraintString.find("("):].strip()
+				columns = constraintString[constraintString.find("(")+1:constraintString.find(")")].replace(' ','').split(',')
+				constraintString = constraintString[constraintString.find(")")+1:].strip()
 				if keyType.lower()=='primary':
 					model['primaryIndex'] = columns
 				elif keyType.lower()=='unique':
 					model['uniqueIndexes'].append(columns)
+				elif keyType.lower()=='foreign':
+					constraintString = constraintString.split("references")[1].strip()
+					referenceTable = constraintString[:constraintString.find('(')].strip()
+					constraintString = constraintString[constraintString.find('('):].strip()
+					referenceColumn = constraintString[constraintString.find("(")+1:constraintString.find(")")].replace(' ','').split(',')[0]
+					model['fkOut'].append({'column' : columns[0], 'referenceTable' : referenceTable, 'referenceColumn' : referenceColumn})
+					print(tableName)
+					print('fkOut')
+					print(columns[0])		
+					print(referenceTable)		
+					print(referenceColumn)		
+					if referenceTable in modelMap :
+						refModel = modelMap[referenceTable]
+						refModel['fkIn'].append({'column' : referenceColumn, 'referredTable' : tableName, 'referredColumn' : columns[0]})
+						print('fkIn')
+						print(referenceColumn)		
+						print(tableName)		
+						print(columns[0])	
 	modelMap[tableName.lower()] = model
 
 def consumeIndex(indexString, indexType):
@@ -552,7 +570,7 @@ class CodeBotLoadDataCommand(sublime_plugin.TextCommand):
 				self.loadSegment(edit, segment.strip())
 
 	def loadSegment(self, edit, segmentStr):
-		if segmentStr.lower().find('create ')  and segmentStr.lower().find(' table ') >= 0:
+		if segmentStr.lower().find('create ') >= 0 and segmentStr.lower().find(' table ') >= 0:
 			consumeTable(segmentStr)
 		#indexs logic here
 		elif segmentStr.lower().find('create primary ') >= 0:
@@ -651,8 +669,6 @@ class QueryBuilderCommand(sublime_plugin.TextCommand):
 			self.suggestions = list(modelMap.keys())
 			self.view.show_popup_menu(self.suggestions, self.on_done)
 			return
-		print('suggestions')
-		print(self.suggestions)
 		self.view.show_popup_menu(self.suggestions, self.on_done)
 
 	def triggerPopup(self):
