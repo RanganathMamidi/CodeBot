@@ -10,5 +10,6 @@
 	{"caption": "RWS4: Get Dao", "command": "code_bot_get_dao"},
 	{"caption": "RWS4: Load SQL", "command": "code_bot_load_data"},
 	{"caption": "RWS4: Load Model Map", "command": "code_bot_load_model_map"},
-	{"caption": "RWS4: Get Html", "command": "code_bot_get_html"}
+	{"caption": "RWS4: Get Html", "command": "code_bot_get_html"},
+	{"caption": "Query Builder", "command": "query_builder"}
 ]
