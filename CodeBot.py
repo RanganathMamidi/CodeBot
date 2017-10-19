@@ -12,7 +12,7 @@ modelMap = {}
 
 #constants start
 
-__modelPath__ = 'model.json'
+__modelPath__ = 'codeBot_Model.json'
 __sqlToJavaDataTypeMap__ = {
 	'int': 'int',
 	'smallint': 'int',
@@ -573,7 +573,7 @@ def loadModelAndSettingsIfRequired():
 	global javaMethodIgnorePrefixesEnabled
 	settings = sublime.load_settings("CodeBot.sublime-settings")
 	sqlToJavaDataTypeMap = settings.get("sql_to_java_data_type_map", __sqlToJavaDataTypeMap__)
-	modelPath = settings.get("model_path", __modelPath__)
+	modelPath = os.path.join(sublime.packages_path(), "User", __modelPath__)
 	javaMethodIgnorePrefixes = settings.get("java_method_ignore_prefixes", [])
 	javaMethodIgnorePrefixesEnabled = settings.get("java_method_ignore_prefixes_enabled", False)
 	loadModelMapFromFile()
