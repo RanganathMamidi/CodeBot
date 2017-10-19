@@ -713,7 +713,7 @@ class QueryBuilderCommand(sublime_plugin.TextCommand):
 		markedTables = []
 		outQuery += 'select \n*\nfrom \n' + tableNames[0] + ' ' + shortHand(tableNames[0]);
 		markedTables.append(tableNames[0])
-		fromTableStrList = []
+		joinTables = []
 		joinConditions = []
 		for tableName in tableNames:
 			model = modelMap[tableName]
@@ -722,7 +722,7 @@ class QueryBuilderCommand(sublime_plugin.TextCommand):
 					tblName = fk['referredTable']
 					column = fk['column']
 					referredColumn = fk['referredColumn']
-					fromTableStrList.append(tblName + ' ' + shortHand(tblName))
+					joinTables.append(tblName + ' ' + shortHand(tblName))
 					joinConditions.append(shortHand(tblName) + '.' + referredColumn + ' = ' + shortHand(tableName) + '.' + column)
 					markedTables.append(tblName)
 			for fk in model['fkOut']:
@@ -730,11 +730,11 @@ class QueryBuilderCommand(sublime_plugin.TextCommand):
 					tblName = fk['referenceTable']
 					column = fk['column']
 					referenceColumn = fk['referenceColumn']
-					fromTableStrList.append(tblName + ' ' + shortHand(tblName))
+					joinTables.append(tblName + ' ' + shortHand(tblName))
 					joinConditions.append(shortHand(tblName) + '.' + referenceColumn + ' = ' + shortHand(tableName) + '.' + column)
 					markedTables.append(tblName)
-		if len(fromTableStrList) > 0:
-			outQuery += '\n, ' + ('\n, '.join(x for x in fromTableStrList))
+		if len(joinTables) > 0:
+			outQuery += '\n, ' + ('\n, '.join(x for x in joinTables))
 			outQuery += '\n where'
 			outQuery += '\n ' + ('\nand '.join(x for x in joinConditions))
 		return outQuery
