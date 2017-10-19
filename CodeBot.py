@@ -3,10 +3,14 @@ import sublime_plugin
 import json
 import re
 import os
+import pprint
+
+__author__ = "Ml.Rangnath"
 
 modelMap = {}
 
 #constants start
+
 sqlToJavaDataTypeMap = {
 	'int': 'int',
 	'smallint': 'int',
@@ -21,6 +25,7 @@ sqlToJavaDataTypeMap = {
 	'varchar(length>1)' : 'String',
 	'datetime' : 'Date'
 }
+__modelPath__ = 'D:/model.json'
 #constants end
 
 
@@ -53,6 +58,18 @@ def camelCase(snakeCaseStr):
 def snakeCase(camelCaseStr):
 	s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', camelCaseStr)
 	return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+def shortHand(snakeCaseStr):
+	return (''.join(x[0] for x in snakeCaseStr.split('_')))
+
+def filterListBySubString(list, query):
+	outList = []
+	if len(list) == 0:
+		return outList
+	for str in list:
+		if(str.find(query) >= 0):
+			outList.append(str)
+	return outList
 #common utils end
 
 #RWS4 specific utils start
@@ -90,11 +107,11 @@ def javaMethodName(tableName, indexColumns, modifier):
 def loadModelMapFromFile():
 	sublime.active_window().status_message('Loading cache from file')
 	try:
-		json_file = open('D:/model.json', 'r')
+		json_file = open(__modelPath__, 'r')
 	except IOError:
-		json_file = open('D:/model.json', 'w')
+		json_file = open(__modelPath__, 'w')
 		return
-	with open('D:/model.json') as json_file:
+	with open(__modelPath__) as json_file:
 		global modelMap
 		if os.path.getsize(os.path.realpath(json_file.name)) > 0 :
 			modelMap = json.load(json_file)
@@ -150,18 +167,9 @@ def consumeTable(tableString):
 					constraintString = constraintString[constraintString.find('('):].strip()
 					referenceColumn = constraintString[constraintString.find("(")+1:constraintString.find(")")].replace(' ','').split(',')[0]
 					model['fkOut'].append({'column' : columns[0], 'referenceTable' : referenceTable, 'referenceColumn' : referenceColumn})
-					print(tableName)
-					print('fkOut')
-					print(columns[0])		
-					print(referenceTable)		
-					print(referenceColumn)		
 					if referenceTable in modelMap :
 						refModel = modelMap[referenceTable]
 						refModel['fkIn'].append({'column' : referenceColumn, 'referredTable' : tableName, 'referredColumn' : columns[0]})
-						print('fkIn')
-						print(referenceColumn)		
-						print(tableName)		
-						print(columns[0])	
 	modelMap[tableName.lower()] = model
 
 def consumeIndex(indexString, indexType):
@@ -469,8 +477,10 @@ def getDefinition(tableName):
 
 def getMetaData(tableName):
 	global modelMap
+	if len(tableName) == 0:
+		return pprint.pformat(modelMap, width=1)
 	model = modelMap[tableName]
-	return json.dumps(model)
+	return pprint.pformat(model, width=1)
 
 def getControllerString(tableName):
 	global modelMap
@@ -559,7 +569,7 @@ class CodeBotLoadDataCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
 		sublime.active_window().status_message('processing and uploading model')
 		self.loadFromSelections(edit)
-		with open('D:/model.json', 'w') as outfile:  
+		with open(__modelPath__, 'w') as outfile:  
 			global modelMap
 			json.dump(modelMap, outfile)
 
@@ -642,34 +652,89 @@ class CodeBotFeelingLuckyCommand(sublime_plugin.TextCommand):
 			processSelections(self.view, edit, 'HTML')
 
 class QueryBuilderCommand(sublime_plugin.TextCommand):
-	# selectedItems = []
-	# suggestions = []
-	# edit = null
 	def run(self, edit, selectedItems=[], suggestions=[]):
 		self.selectedItems = selectedItems
 		self.suggestions = suggestions
 		self.edit = edit
-		self.processMenu()
-
-
-	def on_done(self, index):
-		if index == -1:
+		if len(self.selectedItems) == 0 and len(suggestions) == 0:
+			for sel in self.view.sel():
+				region = sel if sel else self.view.word(sel)
+				inputText = self.view.substr(region).strip()
+				if inputText and inputText != '':
+					self.generateMenu(inputText)
+				else:
+					sublime.message_dialog('Query builder : please enter min 3 char')
 			return
+		self.generateMenu()
+
+	def processSelection(self, index):
+		if index == -1:
+			self.selectedItems = []
+			self.suggestions = []
+			return
+		self.selectedItems.insert(len(self.selectedItems), self.suggestions[index])
 		for sel in self.view.sel():
 			region = sel if sel else self.view.word(sel)
-			text = self.view.substr(region).strip()
-			self.view.replace(self.edit, region, text + ', ' + json.dumps(self.suggestions[index]))
-		self.selectedItems.insert(len(self.selectedItems), self.suggestions[index])
-		self.suggestions.pop(index)
+			self.view.replace(self.edit, region, self.generateQuery(self.selectedItems))
 		sublime.set_timeout(self.triggerPopup, 100)
 
-	def processMenu(self):
+	def generateMenu(self, inputText=''):
 		global modelMap
 		if len(self.selectedItems) == 0:
-			self.suggestions = list(modelMap.keys())
-			self.view.show_popup_menu(self.suggestions, self.on_done)
+			self.suggestions = filterListBySubString(list(modelMap.keys()), inputText)
+			self.view.show_popup_menu(self.suggestions, self.processSelection)
 			return
-		self.view.show_popup_menu(self.suggestions, self.on_done)
+		self.suggestions = self.getSuggestions(self.selectedItems)
+		self.view.show_popup_menu(self.suggestions, self.processSelection)
+
 
 	def triggerPopup(self):
 		self.view.run_command("query_builder", {"selectedItems": self.selectedItems, "suggestions": self.suggestions})
+
+	def getSuggestions(self, selectedItems):
+		global modelMap
+		suggestions = []
+		tableNames = selectedItems
+		baseTables = list(modelMap.keys())
+		for tableName in tableNames:
+			model = modelMap[tableName]
+			for fk in model['fkIn']:
+				if not fk['referredTable'] in tableNames:
+					suggestions.append(fk['referredTable'])
+			for fk in model['fkOut']:
+				if not fk['referenceTable'] in tableNames:
+					suggestions.append(fk['referenceTable'])
+		return list(set(suggestions))
+
+	def generateQuery(self, selectedItems):
+		outQuery = ''
+		tableNames = selectedItems
+		baseTables = list(modelMap.keys())
+		markedTables = []
+		outQuery += 'select \n*\nfrom \n' + tableNames[0] + ' ' + shortHand(tableNames[0]);
+		markedTables.append(tableNames[0])
+		fromTableStrList = []
+		joinConditions = []
+		for tableName in tableNames:
+			model = modelMap[tableName]
+			for fk in model['fkIn']:
+				if fk['referredTable'] in tableNames and fk['referredTable'] not in markedTables:
+					tblName = fk['referredTable']
+					column = fk['column']
+					referredColumn = fk['referredColumn']
+					fromTableStrList.append(tblName + ' ' + shortHand(tblName))
+					joinConditions.append(shortHand(tblName) + '.' + referredColumn + ' = ' + shortHand(tableName) + '.' + column)
+					markedTables.append(tblName)
+			for fk in model['fkOut']:
+				if fk['referenceTable'] in tableNames and fk['referenceTable'] not in markedTables:
+					tblName = fk['referenceTable']
+					column = fk['column']
+					referenceColumn = fk['referenceColumn']
+					fromTableStrList.append(tblName + ' ' + shortHand(tblName))
+					joinConditions.append(shortHand(tblName) + '.' + referenceColumn + ' = ' + shortHand(tableName) + '.' + column)
+					markedTables.append(tblName)
+		if len(fromTableStrList) > 0:
+			outQuery += '\n, ' + ('\n, '.join(x for x in fromTableStrList))
+			outQuery += '\n where'
+			outQuery += '\n ' + ('\nand '.join(x for x in joinConditions))
+		return outQuery
