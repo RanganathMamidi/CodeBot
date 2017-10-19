@@ -10,8 +10,9 @@ __author__ = "Ml.Rangnath"
 modelMap = {}
 
 #constants start
-
-sqlToJavaDataTypeMap = {
+settings = sublime.load_settings("CodeBot.sublime-settings")
+__modelPath__ = 'model.json'
+__sqlToJavaDataTypeMap__ = {
 	'int': 'int',
 	'smallint': 'int',
 	'smallint(1)': 'int',
@@ -25,7 +26,10 @@ sqlToJavaDataTypeMap = {
 	'varchar(length>1)' : 'String',
 	'datetime' : 'Date'
 }
-__modelPath__ = 'D:/model.json'
+sqlToJavaDataTypeMap = settings.get("sql_to_java_data_type_map", __sqlToJavaDataTypeMap__)
+modelPath = settings.get("model_path", __modelPath__)
+javaMethodIgnorePrefixes = settings.get("java_method_ignore_prefixes", [])
+javaMethodIgnorePrefixesEnabled = settings.get("java_method_ignore_prefixes_enabled", False)
 #constants end
 
 
@@ -90,8 +94,16 @@ def javaDataType(sqlType):
 	
 
 def javaMethodName(tableName, indexColumns, modifier):
+	global javaMethodIgnorePrefixesEnabled
+	global javaMethodIgnorePrefixes
 	output = ''
-	output += modifier + pascalCase(tableName)
+	formattedTableName = pascalCase(tableName)
+	if javaMethodIgnorePrefixesEnabled and len(javaMethodIgnorePrefixes) > 0:
+		for key in sorted(javaMethodIgnorePrefixes, reverse=True): 
+			if tableName.lower().find(key.lower() + '_') == 0 :
+				formattedTableName = formattedTableName[len(key):]
+				break
+	output += modifier + formattedTableName
 	for columnName in indexColumns:
 		idx = indexColumns.index(columnName)
 		if idx == 0:
@@ -107,11 +119,11 @@ def javaMethodName(tableName, indexColumns, modifier):
 def loadModelMapFromFile():
 	sublime.active_window().status_message('Loading cache from file')
 	try:
-		json_file = open(__modelPath__, 'r')
+		json_file = open(modelPath, 'r')
 	except IOError:
-		json_file = open(__modelPath__, 'w')
+		json_file = open(modelPath, 'w')
 		return
-	with open(__modelPath__) as json_file:
+	with open(modelPath) as json_file:
 		global modelMap
 		if os.path.getsize(os.path.realpath(json_file.name)) > 0 :
 			modelMap = json.load(json_file)
@@ -569,7 +581,7 @@ class CodeBotLoadDataCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
 		sublime.active_window().status_message('processing and uploading model')
 		self.loadFromSelections(edit)
-		with open(__modelPath__, 'w') as outfile:  
+		with open(modelPath, 'w') as outfile:  
 			global modelMap
 			json.dump(modelMap, outfile)
 

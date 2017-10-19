@@ -1,0 +1,37 @@
+{
+	// required to overide : give the path with 'write access' 
+	"model_path" : "D:/model.json",
+
+	// This is used for translating db dataTypes to java dataTypes
+	// content eclosed in '()' is expression i.e., (1) returns true
+	// 'length' is the size of the table column 
+	// ex: varchar(255) here length is 255  
+	"sql_to_java_data_type_map" : {
+		"int": "int",
+		"smallint": "int",
+		"smallint(1)": "int",
+		"int(length==1)": "boolean",
+		"int(1<length<10)": "int",
+		"int(length>9)": "long",
+		"bigint" : "long",
+		"bigint(1)" : "long",
+		"varchar" : "String",
+		"varchar(length==1)": "boolean",
+		"varchar(length>1)" : "String",
+		"datetime" : "Date"
+	},
+
+	//this should be enbled to use 'java_method_ignore_prefixes'
+	"java_method_ignore_prefixes_enabled" : "true",
+
+	// applicable only when 'java_method_ignore_prefixes_enabled' = 'true'
+	// Removes prefixes form method's name purely user preference
+	"java_method_ignore_prefixes" : [
+		"rws",
+		"rfx",
+		"knl"
+	],
+
+	//TODO: toggle annotations output in java
+	"annotations" : "true"
+}
