@@ -7,10 +7,11 @@ import pprint
 
 __author__ = "Ml.Rangnath"
 
+loadRequired = True
 modelMap = {}
 
 #constants start
-settings = sublime.load_settings("CodeBot.sublime-settings")
+
 __modelPath__ = 'model.json'
 __sqlToJavaDataTypeMap__ = {
 	'int': 'int',
@@ -26,10 +27,10 @@ __sqlToJavaDataTypeMap__ = {
 	'varchar(length>1)' : 'String',
 	'datetime' : 'Date'
 }
-sqlToJavaDataTypeMap = settings.get("sql_to_java_data_type_map", __sqlToJavaDataTypeMap__)
-modelPath = settings.get("model_path", __modelPath__)
-javaMethodIgnorePrefixes = settings.get("java_method_ignore_prefixes", [])
-javaMethodIgnorePrefixesEnabled = settings.get("java_method_ignore_prefixes_enabled", False)
+sqlToJavaDataTypeMap = {}
+modelPath = ''
+javaMethodIgnorePrefixes = []
+javaMethodIgnorePrefixesEnabled = False
 #constants end
 
 
@@ -129,8 +130,6 @@ def loadModelMapFromFile():
 			modelMap = json.load(json_file)
 		else:
 			modelMap = json.loads('{}')
-
-loadModelMapFromFile()
 
 def consumeTable(tableString):
 	global modelMap
@@ -564,7 +563,24 @@ def getControllerString(tableName):
 	return output
 #api end
 
+def loadModelAndSettingsIfRequired():
+	global loadRequired
+	if not loadRequired:
+		return
+	global sqlToJavaDataTypeMap
+	global modelPath
+	global javaMethodIgnorePrefixes
+	global javaMethodIgnorePrefixesEnabled
+	settings = sublime.load_settings("CodeBot.sublime-settings")
+	sqlToJavaDataTypeMap = settings.get("sql_to_java_data_type_map", __sqlToJavaDataTypeMap__)
+	modelPath = settings.get("model_path", __modelPath__)
+	javaMethodIgnorePrefixes = settings.get("java_method_ignore_prefixes", [])
+	javaMethodIgnorePrefixesEnabled = settings.get("java_method_ignore_prefixes_enabled", False)
+	loadModelMapFromFile()
+	loadRequired = False
+
 def processSelections(view, edit, command):
+	loadModelAndSettingsIfRequired()
 	view.run_command('split_selection_into_lines')
 	for sel in view.sel():
 		region = sel if sel else view.word(sel)
@@ -638,11 +654,6 @@ class CodeBotGetHtmlCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
 		processSelections(self.view, edit, 'HTML')
 
-
-# class CodeBotLoadModelMapCommand(sublime_plugin.WindowCommand):
-# 	def run(self):
-# 		loadModelMapFromFile()
-
 class CodeBotFeelingLuckyCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
 		fileName = self.view.file_name()
@@ -665,6 +676,7 @@ class CodeBotFeelingLuckyCommand(sublime_plugin.TextCommand):
 
 class QueryBuilderCommand(sublime_plugin.TextCommand):
 	def run(self, edit, selectedItems=[], suggestions=[]):
+		loadModelAndSettingsIfRequired()
 		self.selectedItems = selectedItems
 		self.suggestions = suggestions
 		self.edit = edit
