@@ -680,7 +680,7 @@ class QueryBuilderCommand(sublime_plugin.TextCommand):
 		self.selectedItems = selectedItems
 		self.suggestions = suggestions
 		self.edit = edit
-		if len(self.selectedItems) == 0 and len(suggestions) == 0:
+		if len(self.selectedItems) == 0 and len(self.suggestions) == 0:
 			for sel in self.view.sel():
 				region = sel if sel else self.view.word(sel)
 				inputText = self.view.substr(region).strip()
