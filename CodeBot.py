@@ -45,7 +45,8 @@ def processFunction(command):
 		'DAO': getDaoString,
 		'HTML': getHtmlString,
 		'DEFINITION': getDefinition,
-		'META_DATA': getMetaData
+		'META_DATA': getMetaData,
+		'CASCADE_DELETE_SQL': getCascadeDeleteSql
 	}[command]
 
 def titleCase(snakeCaseStr):
@@ -75,6 +76,8 @@ def filterListBySubString(list, query):
 		if(str.find(query) >= 0):
 			outList.append(str)
 	return outList
+def newLine(text):
+	return '\n' + text;
 #common utils end
 
 #RWS4 specific utils start
@@ -561,6 +564,24 @@ def getControllerString(tableName):
 	output += ') {\n'
 	output += '\treturn service.' + javaMethodName(tableName, '' , 'delete') + '(' + serviceParams + ');\n}\n\n'
 	return output
+
+def getCascadeDeleteSql(tableName):
+	return _getCascadeDeleteSql(tableName, '', '<<WHERE_CONDITION>>')
+
+def _getCascadeDeleteSql(tableName, column, condition):
+	global modelMap
+	model = modelMap[tableName]
+	output = ''
+	whereCondition = ''
+	if column :
+		whereCondition = ' where ' + column + ' in (' + condition + ')'
+	else :
+		whereCondition = ' where ' + condition
+	for fk in model['fkIn']:
+		tableCondition = 'select ' + fk['referredColumn'] + ' from ' + tableName + whereCondition
+		output += _getCascadeDeleteSql(fk['referredTable'], fk['referredColumn'], tableCondition)
+	output += newLine('delete from ' + tableName + whereCondition + ';')
+	return output
 #api end
 
 def loadModelAndSettingsIfRequired():
@@ -673,6 +694,10 @@ class CodeBotFeelingLuckyCommand(sublime_plugin.TextCommand):
 			processSelections(self.view, edit, 'MY_BATIS')
 		elif fileName.find('.html') >= 0 or fileName.find('.jsp') >= 0 or fileName.find('.tmpl') >= 0 or fileName.find('.view') >= 0:
 			processSelections(self.view, edit, 'HTML')
+
+class CascadeDeleteSqlCommand(sublime_plugin.TextCommand):
+	def run(self, edit):
+		processSelections(self.view, edit, 'CASCADE_DELETE_SQL')			
 
 class QueryBuilderCommand(sublime_plugin.TextCommand):
 	def run(self, edit, selectedItems=[], suggestions=[]):
