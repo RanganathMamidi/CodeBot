@@ -1,6 +1,8 @@
 {
-	// required to overide : give the path with 'write access' 
-	"model_path" : "D:/model.json",
+	// overide : make sure to give the path with 'write access' 
+	// Ex : 'D:/model.json' in windows
+	// default path 'sublime.packages_path()/User/codeBotModel.json'
+	"model_path" : "",
 
 	// This is used for translating db dataTypes to java dataTypes
 	// content eclosed in '()' is expression i.e., (1) returns true
