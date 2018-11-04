@@ -1,2 +1,2 @@
 # CodeBot
-Code Bot RWS. Just for internal purpose
+Code Bot Reflexis. Just for internal purpose
