@@ -647,12 +647,10 @@ class CodeBotLoadDataCommand(sublime_plugin.TextCommand):
 			consumeIndex(segmentStr, 'index')
 
 	def removeComments(self, inputText):
-		print("input : " + inputText)
 		outputText = ''
 		for line in inputText.split('\n'):
 			lineSegments = line.split('--')
 			outputText += newLine(lineSegments[0])
-		print("out : " + outputText)
 		return outputText
 
 class CodeBotGetDefinitionCommand(sublime_plugin.TextCommand):
