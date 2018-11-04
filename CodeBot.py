@@ -620,6 +620,7 @@ def processSelections(view, edit, command):
 
 class CodeBotLoadDataCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
+		loadModelAndSettingsIfRequired()
 		sublime.active_window().status_message('processing and uploading model')
 		self.loadFromSelections(edit)
 		with open(modelPath, 'w') as outfile:  
@@ -629,7 +630,9 @@ class CodeBotLoadDataCommand(sublime_plugin.TextCommand):
 	def loadFromSelections(self, edit):
 		sels = self.view.sel()
 		for sel in sels:
-			for segment in self.view.substr(sel).split(';'):
+			selStr = self.view.substr(sel)
+			selStr = self.removeComments(selStr);
+			for segment in selStr.split(';'):
 				self.loadSegment(edit, segment.strip())
 
 	def loadSegment(self, edit, segmentStr):
@@ -642,6 +645,15 @@ class CodeBotLoadDataCommand(sublime_plugin.TextCommand):
 			consumeIndex(segmentStr, 'unique')
 		elif segmentStr.lower().find('create index ') >= 0:
 			consumeIndex(segmentStr, 'index')
+
+	def removeComments(self, inputText):
+		print("input : " + inputText)
+		outputText = ''
+		for line in inputText.split('\n'):
+			lineSegments = line.split('--')
+			outputText += newLine(lineSegments[0])
+		print("out : " + outputText)
+		return outputText
 
 class CodeBotGetDefinitionCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
